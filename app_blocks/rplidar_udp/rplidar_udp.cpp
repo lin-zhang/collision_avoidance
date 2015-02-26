@@ -286,8 +286,8 @@ static void rplidar_udp_step(ubx_block_t *b) {
 		if(i<N_DETECT){
 		//rp_data[i*2]=temp_angle.f;
 		//rp_data[i*2+1]=temp_dist.f;
-		rp_data[i*2]=-cos(temp_angle.f*3.1415926/180)*temp_dist.f;
-		rp_data[i*2+1]=sin(temp_angle.f*3.1415926/180)*temp_dist.f;
+		rp_data[i*2]=-cos(temp_angle.f*3.1415926/180)*temp_dist.f*0.97;
+		rp_data[i*2+1]=sin(temp_angle.f*3.1415926/180)*temp_dist.f*0.97;
 		}
 	//DBG("%12.3f, %12.3f\n",temp_angle.f,temp_dist.f);	
     	}

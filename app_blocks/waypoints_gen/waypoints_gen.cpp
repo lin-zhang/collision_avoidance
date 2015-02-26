@@ -37,7 +37,7 @@
 #include <netdb.h>
 
 using namespace RM;
-#define ROBOT_WIDTH 500
+#define ROBOT_WIDTH 400
 
 /*
 #define MAP_WIDTH 1000
@@ -181,7 +181,7 @@ static void waypoints_gen_step(ubx_block_t *b) {
 	Point2D ppd[MAX_OBS*MAX_SAT];
 	float distPedal[MAX_OBS];
 	Point2D obsPos[MAX_OBS];
-	int assistingNodeRange=ROBOT_WIDTH/10;
+	int assistingNodeRange=ROBOT_WIDTH;
 	float inBeginPos[2];
 	float inEndPos[2];
 	int inNCenters;
@@ -213,7 +213,7 @@ static void waypoints_gen_step(ubx_block_t *b) {
                 inEndPos[1]=inf->initGoal[1];
         }*/
 
-	DBG("beginPos, endPos [%8.3f,%8.3f,%8.3f,%8.3f]", inBeginPos[0], inBeginPos[1],  inEndPos[0], inEndPos[1]);
+	//DBG("beginPos, endPos [%8.3f,%8.3f,%8.3f,%8.3f]", inBeginPos[0], inBeginPos[1],  inEndPos[0], inEndPos[1]);
 
 	read_nCenters(p_nCenters, &inNCenters);
 	if(ret_read_pos>0){
@@ -221,11 +221,11 @@ static void waypoints_gen_step(ubx_block_t *b) {
 	inf->beginPos.setY(inBeginPos[1]*1000);
 	inf->endPos.setX(inEndPos[0]*1000);
 	inf->endPos.setY(inEndPos[1]*1000);
-	DBG("beginPos, endPos [%8.3f,%8.3f,%8.3f,%8.3f]", 
+/*	DBG("beginPos, endPos [%8.3f,%8.3f,%8.3f,%8.3f]", 
 	inf->beginPos.getX(), 
 	inf->beginPos.getY(),
 	inf->endPos.getX(), 
-	inf->endPos.getY());
+	inf->endPos.getY());*/
 }
 
 //#define OFFSET_X 5000
@@ -251,7 +251,7 @@ static void waypoints_gen_step(ubx_block_t *b) {
 	}
 
 	//DBG("test A\n");
-	satelliteNode(inf->endPos,p0,obsPos,assistingNodesPairs,ppd,ROBOT_WIDTH+assistingNodeRange,distPedal);
+	satelliteNode(inf->endPos,p0,obsPos,assistingNodesPairs,ppd,ROBOT_WIDTH/2+assistingNodeRange,distPedal);
 
 	//DBG("test post A\n");
 	for (int m=0;m<NUM_NODES;m++){

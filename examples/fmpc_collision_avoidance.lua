@@ -105,15 +105,25 @@ ptrig2=ubx.block_create(ni, "std_triggers/ptrig", "ptrig2",
 print("creating instance of 'std_triggers/ptrig'")
 ptrig3=ubx.block_create(ni, "std_triggers/ptrig", "ptrig3",
 			{
-			   period = {sec=0, usec=500000 },
+			   period = {sec=0, usec=200000 },
 			   sched_policy="SCHED_OTHER", sched_priority=0,
 			   trig_blocks={ 
 					 { b=rplidar_udp1, num_steps=1, measure=0 },
                                          { b=k_means_plus1, num_steps=1, measure=0 },
+                                         --{ b=waypoints_gen1, num_steps=1, measure=0 },
+                                         --{ b=path_finding1, num_steps=1, measure=0 },
+                                         --{ b=path_handler1, num_steps=1, measure=0 },
+			   } } )
+
+
+print("creating instance of 'std_triggers/ptrig'")
+ptrig4=ubx.block_create(ni, "std_triggers/ptrig", "ptrig4",
+                        { period={sec=0, usec=50000 },
+                          trig_blocks={
                                          { b=waypoints_gen1, num_steps=1, measure=0 },
                                          { b=path_finding1, num_steps=1, measure=0 },
-                                         { b=path_handler1, num_steps=1, measure=0 },
-			   } } )
+                                        { b=path_handler1, num_steps=1, measure=0 },
+			  } } )
 
 --ubx.ni_stat(ni)
 
@@ -575,6 +585,7 @@ print("running path_handler1 init", ubx.block_init(path_handler1))
 print("running ptrig1 init", ubx.block_init(ptrig1))
 print("running ptrig2 init", ubx.block_init(ptrig2))
 print("running ptrig3 init", ubx.block_init(ptrig3))
+print("running ptrig4 init", ubx.block_init(ptrig4))
 
 print("running fmpc1 init", ubx.block_init(fmpc1))
 print("running youbot1 init", ubx.block_init(youbot1))
@@ -604,6 +615,7 @@ print("running youbot1 start", ubx.block_start(youbot1))
 print("running ptrig1 start", ubx.block_start(ptrig1))
 --print("running ptrig2 start", ubx.block_start(ptrig2))
 print("running ptrig3 start", ubx.block_start(ptrig3))
+print("running ptrig4 start", ubx.block_start(ptrig4))
 
 
 ubx.block_start(fifo1);

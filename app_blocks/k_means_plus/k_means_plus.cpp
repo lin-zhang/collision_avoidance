@@ -177,7 +177,7 @@ static void k_means_plus_step(ubx_block_t *b) {
 	if(!(ret>0))
 	  return;
 	for(int i=0;i<PTS;i++){
-		if(fabs(data_in_val[i*2])<3000&&fabs(data_in_val[i*2+1])<3000)
+		if(fabs(data_in_val[i*2])<2000&&fabs(data_in_val[i*2+1])<2000)
 		{
 			inf->pts[i].x=data_in_val[i*2];
 			inf->pts[i].y=data_in_val[i*2+1];
@@ -194,7 +194,7 @@ static void k_means_plus_step(ubx_block_t *b) {
                 data_out_val[i*2+1]=inf->cent[i].y;
         }	
 	for(int i=0;i<inf->n_clusters;i++)
-	//printf("center[%d]: (%12.3f,%12.3f)\n", i, data_out_val[i*2], data_out_val[i*2+1]);
+	printf("center[%d]: (%12.3f,%12.3f)\n", i, data_out_val[i*2], data_out_val[i*2+1]);
 	write_cent(cent_port, &data_out_val);
 	write_n_clusters(n_clusters_out_port, &(inf->n_clusters));
 }

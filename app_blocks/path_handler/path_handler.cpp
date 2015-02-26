@@ -47,8 +47,6 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
-#define ROBOT_WIDTH 500
-
 #define DATA_LENGTH 24
 #define MAX_OBS 12
 #define MAX_SAT 4
