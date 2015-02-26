@@ -105,7 +105,7 @@ ptrig2=ubx.block_create(ni, "std_triggers/ptrig", "ptrig2",
 print("creating instance of 'std_triggers/ptrig'")
 ptrig3=ubx.block_create(ni, "std_triggers/ptrig", "ptrig3",
 			{
-			   period = {sec=0, usec=200000 },
+			   period = {sec=0, usec=500000 },
 			   sched_policy="SCHED_OTHER", sched_priority=0,
 			   trig_blocks={ 
 					 { b=rplidar_udp1, num_steps=1, measure=0 },

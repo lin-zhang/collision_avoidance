@@ -9,7 +9,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <math.h>
 #include "ubx.h"
 #include "RoboMap/RoboMap.h"
 #include "RoboMap/waypoints_func.h"
@@ -265,17 +265,17 @@ static void waypoints_gen_step(ubx_block_t *b) {
 	NodesPairs[0].setX(inf->beginPos.getX());
 	NodesPairs[0].setY(inf->beginPos.getY());
 
-	NodesPairs[1].setX(inf->beginPos.getX()+assistingNodeRange*4);
+	NodesPairs[1].setX(inf->beginPos.getX()+assistingNodeRange*2);
 	NodesPairs[1].setY(inf->beginPos.getY());
 
-	NodesPairs[2].setX(inf->beginPos.getX()-assistingNodeRange*4);
+	NodesPairs[2].setX(inf->beginPos.getX()-assistingNodeRange*2);
 	NodesPairs[2].setY(inf->beginPos.getY());
 
 	NodesPairs[3].setX(inf->beginPos.getX());
-	NodesPairs[3].setY(inf->beginPos.getY()+assistingNodeRange*4);
+	NodesPairs[3].setY(inf->beginPos.getY()+assistingNodeRange*2);
 
 	NodesPairs[4].setX(inf->beginPos.getX());
-	NodesPairs[4].setY(inf->beginPos.getY()-assistingNodeRange*4);
+	NodesPairs[4].setY(inf->beginPos.getY()-assistingNodeRange*2);
 
 	//DBG("test A\n");
 	for (int m=0;m<NUM_NODES;m++){

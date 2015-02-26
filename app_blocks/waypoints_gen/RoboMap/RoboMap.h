@@ -11,8 +11,8 @@
 #include <iterator>
 #include <stdlib.h>
 #include <unistd.h>
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
+//#include <opencv/cv.h>
+//#include <opencv/highgui.h>
 #include <vector>
 #include <float.h>
 #include <string.h>
@@ -21,7 +21,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
-
+#include <math.h>
 #ifndef ROBOMAP_H_
 #define ROBOMAP_H_
 
