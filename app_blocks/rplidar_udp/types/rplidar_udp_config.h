@@ -4,4 +4,5 @@ struct rplidar_udp_config {
         unsigned char host_ip[15];
         unsigned int port;
 	unsigned int EnableUDP;
+	unsigned char debug_flag;
 };

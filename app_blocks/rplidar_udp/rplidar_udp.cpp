@@ -36,16 +36,20 @@
 #define _countof(_Array) (int)(sizeof(_Array) / sizeof(_Array[0]))
 #endif
 
+/* Number of nodes detected */
 #define N_DETECT 360
+/* Data size = 2x number of nodes */
 #define N_DATA N_DETECT*2
 
 using namespace rp::standalone::rplidar;
 
+/*Data union for transfering float or double type in char. */
 union data{
 	float f;
 	int i;
 };
 
+/*UDP packets buffer size*/
 #define BUF_SIZE 3200
 
 /* declare the type and give the char array type representation as the type private_data */
@@ -74,13 +78,7 @@ ubx_config_t rplidar_udp_config[] = {
 /* Ports
  */
 ubx_port_t rplidar_udp_ports[] = {
-	//{ .name="nData", .out_type_name="unsigned int" },
-	{ .name="rnd", .out_type_name="unsigned int" },
 	{ .name="rplidar_data", .out_type_name="float", .out_data_len=N_DATA},
-	/*{ .name="string_in", .in_type_name="char", .in_data_len=SERIAL_IN_CHAR_LEN},
-        { .name="data_out", .out_type_name="int", .out_data_len=DATA_OUT_ARR_SIZE},
-	{ .name="base_cmd_twist", .out_type_name="struct kdl_twist" },
-*/
 	{ NULL },
 };
 
@@ -108,6 +106,9 @@ u_result capture(RPlidarDriver * drv, size_t* detected_counts, rplidar_response_
  * below.
  */
 struct rplidar_udp_info {
+
+	unsigned char debug_flag;
+
 	char *opt_com_path;
     	_u32 opt_com_baudrate;
         unsigned char* host_ip;
@@ -117,27 +118,26 @@ struct rplidar_udp_info {
         struct sockaddr_in server;
         struct hostent *host;
 	unsigned int EnableUDP;	
+
+	RPlidarDriver * drv;
+	rplidar_response_device_health_t healthinfo;
+	rplidar_response_device_info_t devinfo;
+	rplidar_response_measurement_node_t nodes[N_DATA];
+	u_result op_result;
+	union data temp_angle, temp_dist;
+	int* nr_detected_counts;
+	
+	float 		rp_data[N_DATA];
 };
 
-
-    RPlidarDriver * drv;
-    rplidar_response_device_health_t healthinfo;
-    rplidar_response_device_info_t devinfo;
-    rplidar_response_measurement_node_t nodes[N_DATA];
-    u_result op_result;
-    union data temp_angle, temp_dist;
-    int* nr_detected_counts;
-//    struct sockaddr_in server;
-//    int len = sizeof(struct sockaddr_in);
-//    char buf[BUF_SIZE];
-//    struct hostent *host;
-//    int s, port;
 /* convenience functions to read/write from the ports these fill a
  * ubx_data_t, and call port->[read|write](&data). These introduce
  * some type safety.
  */
-//def_read_fun(read_uint, unsigned int)
-def_write_arr_fun(write_float720, float, N_DATA);
+
+/* Write measured data to output port */
+def_write_arr_fun(write_rplidar_data, float, N_DATA);
+
 /**
  * rplidar_udp_init - block init function.
  *
@@ -149,10 +149,14 @@ def_write_arr_fun(write_float720, float, N_DATA);
  */
 static int rplidar_udp_init(ubx_block_t *b)
 {
-    	nr_detected_counts=(int*)malloc(sizeof(int));
-	drv = RPlidarDriver::CreateDriver(RPlidarDriver::DRIVER_TYPE_SERIALPORT);
+	struct rplidar_udp_info* inf=(struct rplidar_udp_info*) b->private_data;
+	unsigned int clen;
+	struct rplidar_udp_config* rplidar_udp_conf;
 
-	if(!drv){
+    	inf->nr_detected_counts=(int*)malloc(sizeof(int));
+	inf->drv = RPlidarDriver::CreateDriver(RPlidarDriver::DRIVER_TYPE_SERIALPORT);
+
+	if(!inf->drv){
 		ERR("Insufficient memory for RPLidar, exit");
 		return -2;	
 	}
@@ -164,37 +168,36 @@ static int rplidar_udp_init(ubx_block_t *b)
 		ret=EOUTOFMEM;
 		return ret;
 	}
-	struct rplidar_udp_info* inf=(struct rplidar_udp_info*) b->private_data;
-	unsigned int clen;
-	struct rplidar_udp_config* rplidar_udp_conf;
         rplidar_udp_conf = (struct rplidar_udp_config*) ubx_config_get_data_ptr(b, "rplidar_udp_config", &clen);
 	inf->opt_com_path = rplidar_udp_conf->opt_com_path;
 	inf->opt_com_baudrate = rplidar_udp_conf->opt_com_baudrate;
 	inf->host_ip = rplidar_udp_conf->host_ip;
 	inf->port = rplidar_udp_conf->port;
 	inf->EnableUDP = rplidar_udp_conf->EnableUDP;
-        if (IS_FAIL(drv->connect(inf->opt_com_path, inf->opt_com_baudrate))) {
+	inf->debug_flag = rplidar_udp_conf->debug_flag;
+
+        if (IS_FAIL(inf->drv->connect(inf->opt_com_path, inf->opt_com_baudrate))) {
             ERR("Error, cannot bind to the specified serial port %s.\n"
                 , inf->opt_com_path);
             return -2;
         }
 
-        op_result = drv->getDeviceInfo(devinfo);
+        inf->op_result = inf->drv->getDeviceInfo(inf->devinfo);
 
-        if (IS_FAIL(op_result)) {
-            if (op_result == RESULT_OPERATION_TIMEOUT) {
+        if (IS_FAIL(inf->op_result)) {
+            if (inf->op_result == RESULT_OPERATION_TIMEOUT) {
                 // you can check the detailed failure reason
                 fprintf(stderr, "Error, operation time out.\n");
             } else {
-                fprintf(stderr, "Error, unexpected error, code: %x\n", op_result);
+                fprintf(stderr, "Error, unexpected error, code: %x\n", inf->op_result);
                 // other unexpected result
             }
             goto out;
         }
-        op_result = drv->getHealth(healthinfo);
-        if (IS_OK(op_result)) { // the macro IS_OK is the preperred way to judge whether the operation is succeed.
+        inf->op_result = inf->drv->getHealth(inf->healthinfo);
+        if (IS_OK(inf->op_result)) { // the macro IS_OK is the preperred way to judge whether the operation is succeed.
             printf("RPLidar health status : ");
-            switch (healthinfo.status) {
+            switch (inf->healthinfo.status) {
             case RPLIDAR_STATUS_OK:
                 printf("OK.");
                 break;
@@ -205,17 +208,17 @@ static int rplidar_udp_init(ubx_block_t *b)
                 printf("Error.");
                 break;
             }
-            printf(" (errorcode: %d)\n", healthinfo.error_code);
+            printf(" (errorcode: %d)\n", inf->healthinfo.error_code);
 
         } else {
-            fprintf(stderr, "Error, cannot retrieve the lidar health code: %x\n", op_result);
+            fprintf(stderr, "Error, cannot retrieve the lidar health code: %x\n", inf->op_result);
             goto out;
         }
 
-        if (healthinfo.status == RPLIDAR_STATUS_ERROR) {
+        if (inf->healthinfo.status == RPLIDAR_STATUS_ERROR) {
             fprintf(stderr, "Error, rplidar internal error detected. Please reboot the device to retry.\n");
             // enable the following code if you want rplidar to be reboot by software
-            // drv->reset();
+            // inf->drv->reset();
             goto out;
         }
 
@@ -245,9 +248,9 @@ out:
 static void rplidar_udp_cleanup(ubx_block_t *b)
 {
 	DBG(" ");
-        //struct rplidar_udp_info* inf=(struct rplidar_udp_info*) b->private_data;
+        struct rplidar_udp_info* inf=(struct rplidar_udp_info*) b->private_data;
 	free(b->private_data);
-	RPlidarDriver::DisposeDriver(drv);
+	RPlidarDriver::DisposeDriver(inf->drv);
 }
 
 /**
@@ -260,9 +263,8 @@ static void rplidar_udp_cleanup(ubx_block_t *b)
 static int rplidar_udp_start(ubx_block_t *b)
 {
 	DBG("in");
-        //struct rplidar_udp_info* inf=(struct rplidar_udp_info*) b->private_data;
-	//inf=(struct rplidar_udp_info*) b->private_data;
-	drv->startScan();
+        struct rplidar_udp_info* inf=(struct rplidar_udp_info*) b->private_data;
+	inf->drv->startScan();
 	return 0; /* Ok */
 }
 
@@ -274,37 +276,35 @@ static int rplidar_udp_start(ubx_block_t *b)
  */
 int counter_a=0;
 static void rplidar_udp_step(ubx_block_t *b) {
-        capture(drv,(size_t*)nr_detected_counts,nodes);
-        unsigned short raw_angle_buf, raw_dist_buf;
-        struct rplidar_udp_info* inf=(struct rplidar_udp_info*) b->private_data;
-        unsigned int len = sizeof(struct sockaddr_in);
-        ubx_port_t* data_port = ubx_port_get(b, "rplidar_data");
-	float rp_data[N_DATA];
-    	for(int i=1;i<*nr_detected_counts+1;i++){
-    		temp_angle.f = (nodes[i].angle_q6_checkbit >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT)/64.0f;
-    		temp_dist.f = (nodes[i].distance_q2/4.0f);
+        unsigned short 	raw_angle_buf, raw_dist_buf;
+        struct 		rplidar_udp_info* inf=(struct rplidar_udp_info*) b->private_data;
+        unsigned int 	len = sizeof(struct sockaddr_in);
+        ubx_port_t* 	data_port = ubx_port_get(b, "rplidar_data");
+
+        capture(inf->drv,(size_t*)inf->nr_detected_counts,inf->nodes);
+    	for(int i=1;i<*(inf->nr_detected_counts)+1;i++){
+    		inf->temp_angle.f = (inf->nodes[i].angle_q6_checkbit >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT)/64.0f;
+    		inf->temp_dist.f = (inf->nodes[i].distance_q2/4.0f);
 		if(i<N_DETECT){
-		//rp_data[i*2]=temp_angle.f;
-		//rp_data[i*2+1]=temp_dist.f;
-		rp_data[i*2]=-cos(temp_angle.f*3.1415926/180)*temp_dist.f*0.97;
-		rp_data[i*2+1]=sin(temp_angle.f*3.1415926/180)*temp_dist.f*0.97;
+		inf->rp_data[i*2]=-cos(inf->temp_angle.f*3.1415926/180)*inf->temp_dist.f*0.97;
+		inf->rp_data[i*2+1]=sin(inf->temp_angle.f*3.1415926/180)*inf->temp_dist.f*0.97;
 		}
-	//DBG("%12.3f, %12.3f\n",temp_angle.f,temp_dist.f);	
+	DBG("%12.3f, %12.3f\n",inf->temp_angle.f,inf->temp_dist.f);	
     	}
-    	for(int i=0;i<*nr_detected_counts*2;i++){
+    	for(int i=0;i<*inf->nr_detected_counts*2;i++){
 
 
-    		raw_angle_buf = nodes[i].angle_q6_checkbit;
-    		raw_dist_buf = nodes[i].distance_q2;
+    		raw_angle_buf = inf->nodes[i].angle_q6_checkbit;
+    		raw_dist_buf = inf->nodes[i].distance_q2;
 
     		for(int j=0;j<2;j++){
     			inf->buf[i*4+j]=(raw_angle_buf>>(j*8))&0x00FF;
     			inf->buf[i*4+j+2]=(raw_dist_buf>>(j*8))&0x00FF;
     		}
         }
-	write_float720(data_port, &rp_data);
+	write_rplidar_data(data_port, &(inf->rp_data));
 if(inf->EnableUDP==1){
-        if (sendto(inf->s, inf->buf, *nr_detected_counts*4, 0, (struct sockaddr *) &(inf->server), len) == -1) {
+        if (sendto(inf->s, inf->buf, *(inf->nr_detected_counts)*4, 0, (struct sockaddr *) &(inf->server), len) == -1) {
             perror("sendto()");
             return;
         }
